@@ -15,6 +15,12 @@ systemctl start amazon-ssm-agent
 # Get private IP address
 PRIVATE_IP=$(hostname -I | awk '{print $1}')
 
+# Start Oracle Database
+su - oracle -c "sqlplus / as sysdba" <<EOF
+STARTUP;
+EXIT;
+EOF
+
 # Wait for Oracle to be ready (max 5 minutes)
 for i in {1..30}; do
   if su - oracle -c "sqlplus -s / as sysdba <<< 'SELECT 1 FROM DUAL;' > /dev/null 2>&1"; then
