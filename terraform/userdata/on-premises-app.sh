@@ -5,6 +5,16 @@ set -e
 hostnamectl set-hostname on-premises-app
 echo "127.0.0.1 on-premises-app" >> /etc/hosts
 
+# Wait for cloud-init to finish
+while [ ! -f /var/lib/cloud/instance/boot-finished ]; do
+  sleep 2
+done
+
+# Wait for any existing dnf processes
+while pgrep -x dnf > /dev/null || pgrep -x yum > /dev/null; do
+  sleep 5
+done
+
 # Update system
 dnf update -y
 
