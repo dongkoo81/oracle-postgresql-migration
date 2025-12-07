@@ -10,7 +10,7 @@ Oracle 19c 기반 제조 실행 시스템(MES) 애플리케이션
 ## 데이터베이스 설정
 
 ### 연결 정보
-- **호스트**: 10.1.5.18
+- **호스트**:  xxxx
 - **포트**: 1521
 - **서비스명**: oracle19c
 - **사용자**: mesuser / mespass
@@ -19,22 +19,22 @@ Oracle 19c 기반 제조 실행 시스템(MES) 애플리케이션
 
 1. **사용자 생성** (system 계정으로 실행)
 ```bash
-sqlplus system/system@10.1.5.18:1521/oracle19c @sql/01_create_user.sql
+sqlplus system/system@xxxx:1521/oracle19c @sql/01_create_user.sql
 ```
 
 2. **테이블 생성** (mesuser 계정으로 실행)
 ```bash
-sqlplus mesuser/mespass@10.1.5.18:1521/oracle19c @sql/schema/02_create_tables.sql
+sqlplus mesuser/mespass@xxxx:1521/oracle19c @sql/schema/02_create_tables.sql
 ```
 
 3. **프로시저, 트리거, Materialized View 생성**
 ```bash
-sqlplus mesuser/mespass@10.1.5.18:1521/oracle19c @sql/procedures/03_create_procedures.sql
+sqlplus mesuser/mespass@xxx:1521/oracle19c @sql/procedures/03_create_procedures.sql
 ```
 
 4. **샘플 데이터 삽입**
 ```bash
-sqlplus mesuser/mespass@10.1.5.18:1521/oracle19c @sql/data/04_insert_sample_data.sql
+sqlplus mesuser/mespass@xxx:1521/oracle19c @sql/data/04_insert_sample_data.sql
 ```
 
 ## 프로젝트 구조
