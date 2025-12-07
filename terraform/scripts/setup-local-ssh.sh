@@ -102,6 +102,23 @@ EOF
 
 echo "✅ SSH config updated successfully!"
 echo ""
+
+# Deploy application to instances
+echo "=== Deploying Application to EC2 Instances ==="
+echo ""
+
+DEPLOY_SCRIPT="$(cd "$(dirname "$0")" && pwd)/deploy-app.sh"
+
+echo "Deploying to on-premises-app..."
+ssh -o ConnectTimeout=30 on-premises-app "bash -s" < "$DEPLOY_SCRIPT"
+
+echo ""
+echo "Deploying to cloud-app..."
+ssh -o ConnectTimeout=30 cloud-app "bash -s" < "$DEPLOY_SCRIPT"
+
+echo ""
+echo "✅ Application deployment completed!"
+echo ""
 echo "=== How to use ==="
 echo ""
 echo "1. Terminal SSH:"
