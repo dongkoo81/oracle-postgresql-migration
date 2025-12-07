@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Set hostname
+hostnamectl set-hostname cloud-app
+echo "127.0.0.1 cloud-app" >> /etc/hosts
+
 # Update system
 dnf update -y
 

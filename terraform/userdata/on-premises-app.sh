@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Set hostname
+hostnamectl set-hostname on-premises-app
+echo "127.0.0.1 on-premises-app" >> /etc/hosts
+
 # Update system
 dnf update -y
 
