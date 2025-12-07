@@ -5,10 +5,14 @@ set -e
 hostnamectl set-hostname on-premises-app
 echo "127.0.0.1 on-premises-app" >> /etc/hosts
 
-# Wait for any existing dnf processes
-while pgrep -x dnf > /dev/null || pgrep -x yum > /dev/null; do
+# Wait for any existing dnf/yum processes and locks
+while fuser /var/lib/rpm/.rpm.lock >/dev/null 2>&1 || pgrep -x dnf > /dev/null || pgrep -x yum > /dev/null; do
+  echo "Waiting for package manager to be available..."
   sleep 5
 done
+
+# Additional wait for dnf cache
+sleep 10
 
 # Update system
 dnf update -y
