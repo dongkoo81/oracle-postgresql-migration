@@ -102,23 +102,6 @@ EOF
 
 echo "✅ SSH config updated successfully!"
 echo ""
-
-# Deploy application to instances
-echo "=== Deploying Application to EC2 Instances ==="
-echo ""
-
-DEPLOY_SCRIPT="$(dirname "$0")/deploy-app.sh"
-
-echo "Deploying to on-premises-app..."
-ssh -o ConnectTimeout=30 on-premises-app "bash -s" < "$DEPLOY_SCRIPT"
-
-echo ""
-echo "Deploying to cloud-app..."
-ssh -o ConnectTimeout=30 cloud-app "bash -s" < "$DEPLOY_SCRIPT"
-
-echo ""
-echo "✅ Application deployment completed!"
-echo ""
 echo "=== How to use ==="
 echo ""
 echo "1. Terminal SSH:"
@@ -136,4 +119,5 @@ echo "   aws ssm start-session --target $ON_PREM_APP_ID --region $REGION"
 echo "   aws ssm start-session --target $CLOUD_APP_ID --region $REGION"
 echo "   aws ssm start-session --target $ORACLE_ID --region $REGION"
 echo ""
+echo "Note: Application is automatically deployed via userdata during instance creation."
 echo "Note: Make sure your AWS credentials are configured properly."
