@@ -97,6 +97,16 @@ autoever/
 - Gradle 8.5 이상
 - Oracle 19c 데이터베이스 (localhost:1521/ORCLPDB1)
 
+### Java 설치 (Amazon Linux)
+
+```bash
+# Amazon Corretto 17 설치
+sudo yum install -y java-17-amazon-corretto-devel
+
+# 설치 확인
+java -version
+```
+
 ### 빌드
 ```bash
 # 프로젝트 디렉토리로 이동
