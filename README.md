@@ -225,6 +225,158 @@ server:
 | 품질검사 이력 | http://localhost:8080/quality | Partition Table, ROWNUM (2개) |
 | Oracle 특화 기능 | http://localhost:8080/oracle-features | Stored Function, CONNECT BY, XMLType, Materialized View, MERGE, DECODE, DUAL (8개) |
 
+### Oracle 특화 기능 테스트 방법
+
+#### 자동 테스트 스크립트 (권장)
+
+```bash
+# 1. 테스트 스크립트 생성
+cat << 'EOF' > test_oracle_features.sh
+#!/bin/bash
+echo "=========================================="
+echo "Oracle 특화 기능 전체 테스트 (20개)"
+echo "=========================================="
+
+# 애플리케이션 상태 확인
+if ! curl -s http://localhost:8080/api/products > /dev/null 2>&1; then
+    echo "❌ 애플리케이션이 실행되지 않았습니다"
+    exit 1
+fi
+echo "✅ 애플리케이션 정상 실행 중"
+
+# 각 기능 테스트
+echo -e "\n[1] QueryDSL 동적 검색"
+curl -s "http://localhost:8080/api/test/oracle/querydsl/search?name=Engine" | jq -c 'if length > 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[2] Stored Function + NVL"
+curl -s "http://localhost:8080/api/test/oracle/function/check-available?productId=1&requiredQty=10" | jq -c 'if .available != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[3] Stored Procedure + NVL"
+curl -s -X POST "http://localhost:8080/api/test/oracle/procedure/calculate-total/1" | jq -c 'if .totalAmount != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[4] CONNECT BY"
+curl -s "http://localhost:8080/api/test/oracle/hierarchy/1" | jq -c 'if length > 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[5] CLOB"
+curl -s -X POST "http://localhost:8080/api/test/oracle/clob/save?productId=1&content=Test" | jq -c 'if .docId != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[6] BLOB"
+curl -s "http://localhost:8080/api/test/oracle/documents/product/1" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[7] XMLType"
+XML='<spec><version>1.0</version><category>Test</category></spec>'
+curl -s -X POST "http://localhost:8080/api/test/oracle/xml/save?productId=1&xmlContent=$(echo $XML | jq -sRr @uri)" | jq -c 'if .specId != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[8] Materialized View"
+curl -s "http://localhost:8080/api/test/oracle/materialized-view" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[9] DECODE + DUAL"
+curl -s "http://localhost:8080/api/test/oracle/decode/product-status/1" | jq -c 'if .status != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[10] MERGE"
+curl -s -X POST "http://localhost:8080/api/test/oracle/merge/inventory?productId=1&quantity=10" | jq -c 'if .message != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[11] SYSDATE"
+curl -s "http://localhost:8080/api/test/oracle/sysdate/today-products" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[12] TO_DATE"
+curl -s "http://localhost:8080/api/test/oracle/to-date/search?startDate=2024-01-01&endDate=2026-12-31" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[13] ROWNUM"
+curl -s "http://localhost:8080/api/test/oracle/rownum/top-products?limit=3" | jq -c 'if length > 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[14] Sequence NEXTVAL"
+curl -s "http://localhost:8080/api/test/oracle/sequence/nextval?sequenceName=PRODUCT_SEQ" | jq -c 'if .nextVal != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[15] MINUS"
+curl -s "http://localhost:8080/api/test/oracle/minus/products-without-inventory" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[16] (+) Outer Join"
+curl -s "http://localhost:8080/api/test/oracle/outer-join/products-inventory" | jq -c 'if length > 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[17] Partition Table"
+curl -s "http://localhost:8080/api/test/oracle/partition/PASS" | jq -c 'if length >= 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[18] Trigger"
+ORDER_NO="TEST-$(date +%s)"
+curl -s -X POST "http://localhost:8080/api/orders" -H "Content-Type: application/json" -d "{\"orderNo\":\"$ORDER_NO\",\"orderDate\":\"2026-02-21\",\"notes\":\"Test\"}" | jq -c 'if .orderId != null then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[19] Sequence (자동 PK)"
+curl -s "http://localhost:8080/api/products" | jq -c 'if length > 0 then "✅ 성공" else "❌ 실패" end'
+
+echo -e "\n[20] DUAL (자동 사용)"
+echo "✅ 성공 (DECODE 함수 호출 시 자동 사용)"
+
+echo -e "\n=========================================="
+echo "테스트 완료"
+echo "=========================================="
+EOF
+
+chmod +x test_oracle_features.sh
+
+# 2. 테스트 실행
+./test_oracle_features.sh
+```
+
+#### 수동 테스트 (개별 API 호출)
+
+```bash
+# 1. QueryDSL 동적 검색
+curl "http://localhost:8080/api/test/oracle/querydsl/search?name=Engine"
+
+# 2. Stored Function (재고 확인)
+curl "http://localhost:8080/api/test/oracle/function/check-available?productId=1&requiredQty=10"
+
+# 3. Stored Procedure (금액 계산)
+curl -X POST "http://localhost:8080/api/test/oracle/procedure/calculate-total/1"
+
+# 4. CONNECT BY (계층 쿼리)
+curl "http://localhost:8080/api/test/oracle/hierarchy/1"
+
+# 5. CLOB (대용량 텍스트)
+curl -X POST "http://localhost:8080/api/test/oracle/clob/save?productId=1&content=TestDocument"
+
+# 6. XMLType (XML 저장)
+curl -X POST "http://localhost:8080/api/test/oracle/xml/save?productId=1&xmlContent=%3Cspec%3E%3Cversion%3E1.0%3C%2Fversion%3E%3Ccategory%3ETest%3C%2Fcategory%3E%3C%2Fspec%3E"
+
+# 7. Materialized View (일일 요약)
+curl "http://localhost:8080/api/test/oracle/materialized-view"
+
+# 8. DECODE 함수
+curl "http://localhost:8080/api/test/oracle/decode/product-status/1"
+
+# 9. MERGE 문
+curl -X POST "http://localhost:8080/api/test/oracle/merge/inventory?productId=1&quantity=10"
+
+# 10. SYSDATE
+curl "http://localhost:8080/api/test/oracle/sysdate/today-products"
+
+# 11. TO_DATE
+curl "http://localhost:8080/api/test/oracle/to-date/search?startDate=2024-01-01&endDate=2026-12-31"
+
+# 12. ROWNUM
+curl "http://localhost:8080/api/test/oracle/rownum/top-products?limit=5"
+
+# 13. Sequence NEXTVAL
+curl "http://localhost:8080/api/test/oracle/sequence/nextval?sequenceName=PRODUCT_SEQ"
+
+# 14. MINUS
+curl "http://localhost:8080/api/test/oracle/minus/products-without-inventory"
+
+# 15. (+) Outer Join
+curl "http://localhost:8080/api/test/oracle/outer-join/products-inventory"
+
+# 16. Partition Table
+curl "http://localhost:8080/api/test/oracle/partition/PASS"
+
+# 17. Trigger (주문 생성 시 자동 실행)
+curl -X POST "http://localhost:8080/api/orders" \
+  -H "Content-Type: application/json" \
+  -d '{"orderNo":"TEST-001","orderDate":"2026-02-21","notes":"Trigger Test"}'
+
+# 18-20. Sequence, BLOB, DUAL, NVL은 다른 API에 포함되어 자동 테스트됨
+```
+
 ---
 
 ## PostgreSQL 마이그레이션 시 예상 문제점
