@@ -5,7 +5,34 @@ Oracle 19c 기반 제조 실행 시스템(MES) 애플리케이션
 ## 프로젝트 개요
 
 - **목적**: Oracle 특화 기능을 활용한 MES 시스템 구축 및 AWS DMS를 통한 PostgreSQL 마이그레이션 테스트
-- **기술 스택**: Spring Boot 3.2, Oracle 19c, JPA, QueryDSL, MyBatis, Thymeleaf
+- **데이터베이스**: Oracle 19c (Docker)
+- **애플리케이션**: Spring Boot 3.2, Java 17
+
+## 기술 스택
+
+### 백엔드
+- **프레임워크**: Spring Boot 3.2.0
+- **언어**: Java 17 (Amazon Corretto)
+- **빌드 도구**: Gradle 8.5
+- **ORM**: JPA (Hibernate 6.3)
+- **동적 쿼리**: QueryDSL 5.0
+- **SQL 매퍼**: MyBatis 3.0
+- **템플릿 엔진**: Thymeleaf 3.1
+
+### 데이터베이스
+- **Oracle 19c**: 개발/테스트 환경
+- **PostgreSQL**: 마이그레이션 타겟
+
+### 마이그레이션 시 애플리케이션 변경 사항
+
+| 항목 | Oracle | PostgreSQL | 변경 필요 |
+|------|--------|-----------|----------|
+| **JPA/Hibernate** | OracleDialect | PostgreSQLDialect | ✅ 설정 변경 |
+| **QueryDSL** | 동일 | 동일 | ❌ 변경 불필요 |
+| **MyBatis** | Oracle 문법 | PostgreSQL 문법 | ✅ XML 수정 |
+| **JDBC Driver** | ojdbc8 | postgresql | ✅ 의존성 변경 |
+| **Sequence 호출** | `@GeneratedValue` | `@GeneratedValue` | ❌ 변경 불필요 |
+| **페이징** | ROWNUM | LIMIT/OFFSET | ✅ Native Query 수정 |
 
 ## 데이터베이스 설정
 
@@ -351,6 +378,59 @@ $$ LANGUAGE plpgsql;
 | Materialized View | 🟢 낮음 | 문법 약간 변경 |
 | Partition Table | 🟡 중간 | Subpartition 재설계 필요 |
 | NVL/DECODE | 🔴 높음 | 모든 쿼리 수정 필요 |
+| ROWNUM | 🔴 높음 | 페이징 로직 재작성 |
+| MERGE | 🟡 중간 | ON CONFLICT로 변경 |
+
+### 11. 애플리케이션 레이어 마이그레이션 체크리스트
+
+#### ✅ 변경 불필요 (DB 독립적)
+- **Spring Boot**: 프레임워크 코드 변경 없음
+- **JPA Entity**: `@Entity`, `@Table`, `@Column` 등 어노테이션 유지
+- **QueryDSL**: 동적 쿼리 코드 변경 없음 (Dialect만 변경)
+- **Service/Controller**: 비즈니스 로직 변경 없음
+- **Thymeleaf**: 템플릿 코드 변경 없음
+
+#### ⚠️ 설정 변경 필요
+- **application.yml**
+  ```yaml
+  # Before (Oracle)
+  spring:
+    datasource:
+      url: jdbc:oracle:thin:@//localhost:1521/ORCLPDB1
+      driver-class-name: oracle.jdbc.OracleDriver
+    jpa:
+      database-platform: org.hibernate.dialect.Oracle12cDialect
+  
+  # After (PostgreSQL)
+  spring:
+    datasource:
+      url: jdbc:postgresql://localhost:5432/mesdb
+      driver-class-name: org.postgresql.Driver
+    jpa:
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+  ```
+
+- **build.gradle**
+  ```gradle
+  # Before (Oracle)
+  implementation 'com.oracle.database.jdbc:ojdbc8:21.9.0.0'
+  
+  # After (PostgreSQL)
+  implementation 'org.postgresql:postgresql:42.7.1'
+  ```
+
+#### 🔴 코드 수정 필요
+- **MyBatis XML**: Oracle 전용 함수 사용 시 (NVL, DECODE, ROWNUM 등)
+- **Native Query**: `@Query` 어노테이션에서 Oracle SQL 사용 시
+- **Stored Procedure 호출**: MyBatis Mapper에서 프로시저 호출 부분
+
+#### 📋 테스트 항목
+1. **단위 테스트**: Repository, Service 레이어 테스트
+2. **통합 테스트**: 전체 트랜잭션 플로우 테스트
+3. **성능 테스트**: 페이징, 대용량 데이터 조회
+4. **기능 테스트**: 각 화면별 CRUD 동작 확인
+
+---
 | ROWNUM | 🔴 높음 | 페이징 로직 재작성 |
 | MERGE | 🟡 중간 | ON CONFLICT로 변경 |
 
