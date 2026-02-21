@@ -93,3 +93,5 @@ SET TOTAL_AMOUNT = (
 );
 
 COMMIT;
+
+EXIT;
