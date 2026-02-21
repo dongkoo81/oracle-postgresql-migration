@@ -449,7 +449,7 @@ $$ LANGUAGE plpgsql;
 - `GET /api/quality/result/{result}` - 결과별 품질검사 조회 (PASS/FAIL/PENDING)
 - `POST /api/quality` - 품질검사 생성
 
-### Oracle 특화 기능 테스트 API
+### Oracle 특화 기능 테스트 API (16개)
 
 #### 1. QueryDSL 동적 쿼리
 - `GET /api/test/oracle/querydsl/search?name=Engine&minPrice=100000&maxPrice=200000`
@@ -501,6 +501,12 @@ $$ LANGUAGE plpgsql;
 
 #### 16. Partition Table (파티션 조회)
 - `GET /api/test/oracle/partition/{result}` (result: PASS, FAIL, PENDING)
+
+**참고:** 나머지 4개 기능은 다른 API에 포함되어 있습니다:
+- **Trigger**: 주문 생성 시 자동 실행 (`POST /api/orders`)
+- **BLOB**: PRODUCT_DOCUMENT 테이블에 구현 (CLOB API와 동일 테이블)
+- **DUAL**: Stored Function 호출 시 자동 사용 (예: `GET_PRODUCT_STATUS`)
+- **NVL**: Stored Procedure/Function 내부에서 사용 (API #2, #3)
 
 ### 웹 UI
 - `http://localhost:8080` - 홈페이지
