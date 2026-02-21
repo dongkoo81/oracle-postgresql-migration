@@ -9,6 +9,33 @@ Oracle 19c 기반 제조 실행 시스템(MES) 애플리케이션
 
 ## 데이터베이스 설정
 
+### 사전 준비: SQL*Plus 설치 (EC2 환경)
+
+Docker 외부(EC2)에서 Oracle에 접속하려면 SQL*Plus 설치 필요:
+
+```bash
+# Oracle Instant Client 다운로드 (Oracle 계정 필요)
+# https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html
+# - instantclient-basic-linux.x64-19.x.x.x.x.rpm
+# - instantclient-sqlplus-linux.x64-19.x.x.x.x.rpm
+
+# 필수 패키지 설치
+sudo yum install -y libaio
+
+# RPM 설치 (다운로드한 파일 경로에서)
+sudo rpm -ivh instantclient-basic-linux.x64-19.*.rpm
+sudo rpm -ivh instantclient-sqlplus-linux.x64-19.*.rpm
+
+# 환경 변수 설정
+echo 'export ORACLE_HOME=/usr/lib/oracle/19.x/client64' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+echo 'export PATH=$ORACLE_HOME/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+
+# 설치 확인
+sqlplus -v
+```
+
 ### 연결 정보
 - **호스트**: localhost (Docker 환경)
 - **포트**: 1521
