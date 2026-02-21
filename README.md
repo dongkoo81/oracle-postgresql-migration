@@ -137,8 +137,8 @@ java -jar build/libs/mes-0.0.1-SNAPSHOT.jar
 
 #### 3. 백그라운드 실행
 
-
-# 또는 JAR 파일로
+```bash
+# JAR 파일로 백그라운드 실행
 nohup java -jar build/libs/mes-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
 
 # 프로세스 확인
@@ -148,8 +148,6 @@ ps aux | grep java
 tail -f app.log
 
 # 종료
-pkill -f "gradlew bootRun"
-# 또는
 pkill -f "mes-0.0.1-SNAPSHOT.jar"
 ```
 
