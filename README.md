@@ -440,7 +440,7 @@ $$ LANGUAGE plpgsql;
 
 ## API 엔드포인트
 
-### REST API
+### 기본 REST API
 - `GET /api/products` - 제품 목록 조회
 - `POST /api/products` - 제품 생성
 - `GET /api/orders` - 주문 목록 조회
@@ -449,12 +449,65 @@ $$ LANGUAGE plpgsql;
 - `GET /api/quality/result/{result}` - 결과별 품질검사 조회 (PASS/FAIL/PENDING)
 - `POST /api/quality` - 품질검사 생성
 
+### Oracle 특화 기능 테스트 API
+
+#### 1. QueryDSL 동적 쿼리
+- `GET /api/test/oracle/querydsl/search?name=Engine&minPrice=100000&maxPrice=200000`
+
+#### 2. Stored Function (재고 확인, NVL 사용)
+- `GET /api/test/oracle/function/check-available?productId=1&requiredQty=10`
+
+#### 3. Stored Procedure (금액 계산, NVL 사용)
+- `POST /api/test/oracle/procedure/calculate-total/{orderId}`
+
+#### 4. CONNECT BY (계층 쿼리)
+- `GET /api/test/oracle/hierarchy/{orderId}`
+
+#### 5. CLOB (대용량 텍스트)
+- `POST /api/test/oracle/clob/save?productId=1&content=...`
+- `GET /api/test/oracle/documents/product/{productId}`
+
+#### 6. XMLType (XML 저장 및 검증)
+- `POST /api/test/oracle/xml/save?productId=1&xmlContent=...`
+- `GET /api/test/oracle/specs/product/{productId}`
+
+#### 7. Materialized View (일일 요약)
+- `GET /api/test/oracle/materialized-view`
+- `POST /api/test/oracle/materialized-view/refresh`
+
+#### 8. DECODE 함수 (조건부 값 반환)
+- `GET /api/test/oracle/decode/product-status/{productId}`
+
+#### 9. MERGE 문 (UPSERT)
+- `POST /api/test/oracle/merge/inventory?productId=1&quantity=100`
+
+#### 10. SYSDATE (현재 날짜)
+- `GET /api/test/oracle/sysdate/today-products`
+
+#### 11. TO_DATE (날짜 범위 검색)
+- `GET /api/test/oracle/to-date/search?startDate=2024-01-01&endDate=2024-12-31`
+
+#### 12. ROWNUM (직접 페이징)
+- `GET /api/test/oracle/rownum/top-products?limit=5`
+
+#### 13. Sequence NEXTVAL (직접 호출)
+- `GET /api/test/oracle/sequence/nextval?sequenceName=PRODUCT_SEQ`
+
+#### 14. MINUS (집합 연산)
+- `GET /api/test/oracle/minus/products-without-inventory`
+
+#### 15. (+) Outer Join (구식 문법)
+- `GET /api/test/oracle/outer-join/products-inventory`
+
+#### 16. Partition Table (파티션 조회)
+- `GET /api/test/oracle/partition/{result}` (result: PASS, FAIL, PENDING)
+
 ### 웹 UI
 - `http://localhost:8080` - 홈페이지
-- `http://localhost:8080/products` - 제품 관리 (Sequence, JPA)
-- `http://localhost:8080/orders` - 작업지시 관리 (Stored Procedure, Trigger, CLOB)
-- `http://localhost:8080/quality` - 품질검사 이력 (파티션 테이블 - Range + List Composite)
-- `http://localhost:8080/oracle-features` - Oracle 특화 기능 (실제 UI)
+- `http://localhost:8080/products` - 제품 관리 (Sequence, ROWNUM)
+- `http://localhost:8080/orders` - 작업지시 관리 (Stored Procedure, Trigger, CLOB, NVL)
+- `http://localhost:8080/quality` - 품질검사 이력 (Partition Table, ROWNUM)
+- `http://localhost:8080/oracle-features` - Oracle 특화 기능 체험 (Stored Function, CONNECT BY, XMLType, Materialized View, MERGE, DECODE, DUAL)
 
 ---
 
