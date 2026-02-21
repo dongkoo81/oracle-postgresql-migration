@@ -187,10 +187,10 @@ server:
 
 | 화면 | URL | 포함된 Oracle 기능 |
 |------|-----|-------------------|
-| 제품 관리 | http://localhost:8080/products | Sequence (PK 자동생성), QueryDSL (동적 검색), ROWNUM (페이징) |
+| 제품 관리 | http://localhost:8080/products | Sequence (PK 자동생성), ROWNUM (페이징) |
 | 작업지시 관리 | http://localhost:8080/orders | Stored Procedure (금액 계산), Trigger (이력 자동생성), CLOB (대용량 메모) |
 | 품질검사 이력 | http://localhost:8080/quality | Partition Table (Range+List), ROWNUM (페이징) |
-| Oracle 특화 기능 | http://localhost:8080/oracle-features | QueryDSL 동적 검색, Stored Function (재고 확인), Stored Procedure (금액 계산, NVL), CONNECT BY (계층 쿼리), CLOB (문서 관리), XMLType (제품 사양), Materialized View (일일 요약, Refresh), DECODE (상태 확인), MERGE (재고 UPSERT) |
+| Oracle 특화 기능 | http://localhost:8080/oracle-features | Stored Function (재고 확인, NVL), Stored Procedure (금액 계산, NVL), CONNECT BY (계층 쿼리), CLOB (문서 관리), XMLType (제품 사양), Materialized View (일일 요약, Refresh), DECODE (상태 확인), MERGE (재고 UPSERT) |
 
 ---
 
@@ -369,7 +369,7 @@ $$ LANGUAGE plpgsql;
 
 ### 웹 UI
 - `http://localhost:8080` - 홈페이지
-- `http://localhost:8080/products` - 제품 관리 (Sequence, QueryDSL, JPA)
+- `http://localhost:8080/products` - 제품 관리 (Sequence, JPA)
 - `http://localhost:8080/orders` - 작업지시 관리 (Stored Procedure, Trigger, CLOB)
 - `http://localhost:8080/quality` - 품질검사 이력 (파티션 테이블 - Range + List Composite)
 - `http://localhost:8080/oracle-features` - Oracle 특화 기능 (실제 UI)
@@ -379,10 +379,10 @@ $$ LANGUAGE plpgsql;
 ## 구현 완료 현황
 
 ### ✅ 전체 기능 구현 완료
-총 9개 테이블, 15개 Oracle 특화 기능 모두 구현 및 테스트 완료
+총 9개 테이블, 14개 Oracle 특화 기능 모두 구현 및 테스트 완료
 
 ### 테이블 목록
-1. ✅ PRODUCT - Sequence, QueryDSL, JPA
+1. ✅ PRODUCT - Sequence, JPA
 2. ✅ PRODUCTION_ORDER - Stored Procedure, Trigger, CLOB
 3. ✅ ORDER_DETAIL - Foreign Key
 4. ✅ INVENTORY - Optimistic Lock (VERSION)
@@ -394,19 +394,18 @@ $$ LANGUAGE plpgsql;
 
 ### Oracle 특화 기능
 1. ✅ Sequence - 자동 증가 PK
-2. ✅ QueryDSL - 동적 검색 쿼리
-3. ✅ Stored Procedure - CALCULATE_ORDER_TOTAL, MERGE_INVENTORY
-4. ✅ Stored Function - CHECK_PRODUCT_AVAILABLE, GET_PRODUCT_STATUS, GET_TOP_PRODUCTS
-5. ✅ Trigger - 주문 생성 시 이력 자동 기록
-6. ✅ CONNECT BY - 계층 구조 쿼리
-7. ✅ CLOB - 4GB 대용량 텍스트
-8. ✅ XMLType - XML 데이터 저장 및 검증
-9. ✅ Materialized View - REFRESH ON DEMAND
-10. ✅ Partition Table - Range + List Composite Partition
-11. ✅ NVL - NULL 값 처리 (CALCULATE_ORDER_TOTAL, CHECK_PRODUCT_AVAILABLE)
-12. ✅ DECODE - 조건부 값 반환 (GET_PRODUCT_STATUS)
-13. ✅ ROWNUM - 페이징 처리 (Hibernate 자동 사용)
-14. ✅ MERGE - UPSERT 작업 (MERGE_INVENTORY)
-15. ✅ DUAL - 함수 호출용 더미 테이블
+2. ✅ Stored Procedure - CALCULATE_ORDER_TOTAL, MERGE_INVENTORY
+3. ✅ Stored Function - CHECK_PRODUCT_AVAILABLE, GET_PRODUCT_STATUS, GET_TOP_PRODUCTS
+4. ✅ Trigger - 주문 생성 시 이력 자동 기록
+5. ✅ CONNECT BY - 계층 구조 쿼리
+6. ✅ CLOB - 4GB 대용량 텍스트
+7. ✅ XMLType - XML 데이터 저장 및 검증
+8. ✅ Materialized View - REFRESH ON DEMAND
+9. ✅ Partition Table - Range + List Composite Partition
+10. ✅ NVL - NULL 값 처리 (CALCULATE_ORDER_TOTAL, CHECK_PRODUCT_AVAILABLE)
+11. ✅ DECODE - 조건부 값 반환 (GET_PRODUCT_STATUS)
+12. ✅ ROWNUM - 페이징 처리 (Hibernate 자동 사용)
+13. ✅ MERGE - UPSERT 작업 (MERGE_INVENTORY)
+14. ✅ DUAL - 함수 호출용 더미 테이블
 
 
