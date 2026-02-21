@@ -40,23 +40,23 @@ EXCEPTION
 END;
 /
 
--- 제품 상태 확인 함수 (DECODE 사용)
+-- 제품 상태 확인 함수 (DECODE 사용 - SQL 문 내에서)
 CREATE OR REPLACE FUNCTION GET_PRODUCT_STATUS(
     p_product_id IN NUMBER
 ) RETURN VARCHAR2 AS
-    v_quantity NUMBER;
+    v_status VARCHAR2(50);
 BEGIN
-    SELECT NVL(QUANTITY, 0)
-    INTO v_quantity
-    FROM INVENTORY
-    WHERE PRODUCT_ID = p_product_id;
-    
-    RETURN DECODE(
-        SIGN(v_quantity - 100),
+    SELECT DECODE(
+        SIGN(NVL(i.QUANTITY, 0) - 100),
         1, 'HIGH_STOCK',
         0, 'NORMAL',
-        -1, DECODE(SIGN(v_quantity - 10), -1, 'LOW_STOCK', 'NORMAL')
-    );
+        -1, DECODE(SIGN(NVL(i.QUANTITY, 0) - 10), -1, 'LOW_STOCK', 'NORMAL')
+    )
+    INTO v_status
+    FROM INVENTORY i
+    WHERE i.PRODUCT_ID = p_product_id;
+    
+    RETURN v_status;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RETURN 'OUT_OF_STOCK';

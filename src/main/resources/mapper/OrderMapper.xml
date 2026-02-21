@@ -19,18 +19,16 @@
     </select>
 
     <!-- Stored Function: GET_PRODUCT_STATUS (DECODE 사용) -->
-    <select id="getProductStatus" statementType="CALLABLE" resultType="java.lang.String">
-        {#{result, mode=OUT, jdbcType=VARCHAR} = CALL GET_PRODUCT_STATUS(
-            #{productId, mode=IN, jdbcType=NUMERIC}
-        )}
+    <select id="getProductStatus" resultType="java.lang.String">
+        SELECT GET_PRODUCT_STATUS(#{productId}) AS status FROM DUAL
     </select>
 
     <!-- Stored Procedure: MERGE_INVENTORY (MERGE 문 사용) -->
-    <select id="mergeInventory" statementType="CALLABLE">
+    <update id="mergeInventory" statementType="CALLABLE">
         {CALL MERGE_INVENTORY(
             #{productId, mode=IN, jdbcType=NUMERIC},
             #{quantity, mode=IN, jdbcType=NUMERIC}
         )}
-    </select>
+    </update>
 
 </mapper>
