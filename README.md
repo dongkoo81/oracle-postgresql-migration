@@ -183,47 +183,14 @@ server:
 - **MERGE**: UPSERT 작업 (MERGE_INVENTORY)
 - **DUAL**: 함수 호출용 더미 테이블
 
-### Oracle 특화 기능 UI (http://localhost:8080/oracle-features)
+### 화면별 Oracle 특화 기능
 
-| 기능 | 화면 메뉴 | 설명 |
-|------|----------|------|
-| QueryDSL 동적 검색 | 📦 제품 검색 | 제품명, 가격 범위로 동적 검색 |
-| Stored Function | 📊 재고 가용성 확인 | 제품별 재고 충분 여부 체크 |
-| Stored Procedure | 💰 주문 금액 계산 | 주문 상세 기반 총액 자동 계산 (NVL 사용) |
-| CONNECT BY | 🔗 생산 이력 조회 | 계층 구조 이력 표시 |
-| CLOB | 📄 문서 관리 | 대용량 텍스트, 문서 유형별 템플릿 제공 |
-| XMLType | 📋 제품 사양 | XML 검증, 제품별 사양 템플릿 |
-| Materialized View | 📈 일일 주문 요약 | 날짜별 주문 통계, 수동 Refresh |
-
-### Oracle 특화 기능 테스트 API
-
-| # | API | 기능 | 사용 테이블 |
-|---|-----|------|------------|
-| 1 | `POST /api/test/oracle/procedure/calculate-total/1` | Stored Procedure (NVL) | PRODUCTION_ORDER, ORDER_DETAIL |
-| 2 | `GET /api/test/oracle/function/check-available?productId=1&requiredQty=10` | Stored Function (NVL) | INVENTORY, PRODUCT |
-| 3 | `GET /api/test/oracle/hierarchy/1` | CONNECT BY 계층 쿼리 | PRODUCTION_HISTORY |
-| 4 | `GET /api/test/oracle/querydsl/search?name=Engine&minPrice=100000&maxPrice=200000` | QueryDSL 동적 검색 | PRODUCT |
-| 5 | `POST /api/test/oracle/clob/save?productId=1&content=Large%20text` | CLOB 저장 | PRODUCT_DOCUMENT |
-| 6 | `POST /api/test/oracle/xml/save?productId=1&xmlContent=<spec>...</spec>` | XMLType 저장 | PRODUCT_SPEC |
-| 7 | `GET /api/test/oracle/materialized-view` | Materialized View 조회 | DAILY_SUMMARY |
-| 8 | `POST /api/test/oracle/materialized-view/refresh` | Materialized View Refresh | DAILY_SUMMARY |
-| 9 | `GET /api/test/oracle/partition/PASS` | Partition Table 조회 | QUALITY_INSPECTION |
-| 10 | `GET /api/test/oracle/decode/product-status/1` | DECODE 함수 | INVENTORY |
-| 11 | `POST /api/test/oracle/merge/inventory?productId=1&quantity=50` | MERGE 문 (UPSERT) | INVENTORY |
-
-**사용 방법:**
-```bash
-# 예시: Stored Procedure 테스트
-curl -X POST http://localhost:8080/api/test/oracle/procedure/calculate-total/1
-
-# 예시: QueryDSL 동적 검색
-curl "http://localhost:8080/api/test/oracle/querydsl/search?name=Engine&minPrice=100000&maxPrice=200000"
-```
-```
-
-**권장 사용 방법:**
-- **일반 사용자**: `http://localhost:8080/oracle-features` 화면 사용
-- **개발자/테스트**: 위 API 직접 호출
+| 화면 | URL | 포함된 Oracle 기능 |
+|------|-----|-------------------|
+| 제품 관리 | http://localhost:8080/products | Sequence (PK 자동생성), QueryDSL (동적 검색), ROWNUM (페이징) |
+| 작업지시 관리 | http://localhost:8080/orders | Stored Procedure (금액 계산), Trigger (이력 자동생성), CLOB (대용량 메모) |
+| 품질검사 이력 | http://localhost:8080/quality | Partition Table (Range+List), ROWNUM (페이징) |
+| Oracle 특화 기능 | http://localhost:8080/oracle-features | 모든 Oracle 기능 통합 테스트 화면 |
 
 ---
 
