@@ -74,7 +74,7 @@ autoever/
 ### 빌드
 ```bash
 # 프로젝트 디렉토리로 이동
-cd /home/ec2-user/projects/autoever
+cd /home/ec2-user/project/oracle-postgresql-migration
 
 # 빌드 (테스트 제외)
 ./gradlew clean build -x test
