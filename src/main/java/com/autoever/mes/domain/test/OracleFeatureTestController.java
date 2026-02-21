@@ -116,4 +116,27 @@ public class OracleFeatureTestController {
     public List<QualityInspection> testPartitionTable(@PathVariable String result) {
         return qualityInspectionService.findByResult(result);
     }
+    
+    // 12. DECODE 함수 테스트 (제품 상태 확인)
+    @GetMapping("/decode/product-status/{productId}")
+    public Map<String, Object> testDecodeFunction(@PathVariable Long productId) {
+        String status = orderMapper.getProductStatus(productId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("productId", productId);
+        result.put("status", status);
+        return result;
+    }
+    
+    // 13. MERGE 문 테스트 (재고 업데이트)
+    @PostMapping("/merge/inventory")
+    public Map<String, Object> testMergeStatement(
+            @RequestParam Long productId,
+            @RequestParam Integer quantity) {
+        orderMapper.mergeInventory(productId, quantity);
+        Map<String, Object> result = new HashMap<>();
+        result.put("productId", productId);
+        result.put("quantityAdded", quantity);
+        result.put("message", "Inventory merged successfully");
+        return result;
+    }
 }

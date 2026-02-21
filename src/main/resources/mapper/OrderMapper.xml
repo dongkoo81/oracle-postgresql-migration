@@ -18,4 +18,19 @@
         )}
     </select>
 
+    <!-- Stored Function: GET_PRODUCT_STATUS (DECODE 사용) -->
+    <select id="getProductStatus" statementType="CALLABLE" resultType="java.lang.String">
+        {#{result, mode=OUT, jdbcType=VARCHAR} = CALL GET_PRODUCT_STATUS(
+            #{productId, mode=IN, jdbcType=NUMERIC}
+        )}
+    </select>
+
+    <!-- Stored Procedure: MERGE_INVENTORY (MERGE 문 사용) -->
+    <select id="mergeInventory" statementType="CALLABLE">
+        {CALL MERGE_INVENTORY(
+            #{productId, mode=IN, jdbcType=NUMERIC},
+            #{quantity, mode=IN, jdbcType=NUMERIC}
+        )}
+    </select>
+
 </mapper>

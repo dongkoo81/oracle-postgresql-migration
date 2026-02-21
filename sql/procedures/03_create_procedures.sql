@@ -1,10 +1,10 @@
--- 주문 총액 계산 프로시저
+-- 주문 총액 계산 프로시저 (NVL, DECODE 사용)
 CREATE OR REPLACE PROCEDURE CALCULATE_ORDER_TOTAL(
     p_order_id IN NUMBER,
     p_total_amount OUT NUMBER
 ) AS
 BEGIN
-    SELECT SUM(LINE_AMOUNT)
+    SELECT NVL(SUM(LINE_AMOUNT), 0)
     INTO p_total_amount
     FROM ORDER_DETAIL
     WHERE ORDER_ID = p_order_id;
@@ -17,14 +17,14 @@ BEGIN
 END;
 /
 
--- 제품 가용성 확인 함수
+-- 제품 가용성 확인 함수 (NVL 사용)
 CREATE OR REPLACE FUNCTION CHECK_PRODUCT_AVAILABLE(
     p_product_id IN NUMBER,
     p_required_qty IN NUMBER
 ) RETURN NUMBER AS
     v_current_qty NUMBER;
 BEGIN
-    SELECT QUANTITY
+    SELECT NVL(QUANTITY, 0)
     INTO v_current_qty
     FROM INVENTORY
     WHERE PRODUCT_ID = p_product_id;
@@ -37,6 +37,68 @@ BEGIN
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RETURN 0;
+END;
+/
+
+-- 제품 상태 확인 함수 (DECODE 사용)
+CREATE OR REPLACE FUNCTION GET_PRODUCT_STATUS(
+    p_product_id IN NUMBER
+) RETURN VARCHAR2 AS
+    v_quantity NUMBER;
+BEGIN
+    SELECT NVL(QUANTITY, 0)
+    INTO v_quantity
+    FROM INVENTORY
+    WHERE PRODUCT_ID = p_product_id;
+    
+    RETURN DECODE(
+        SIGN(v_quantity - 100),
+        1, 'HIGH_STOCK',
+        0, 'NORMAL',
+        -1, DECODE(SIGN(v_quantity - 10), -1, 'LOW_STOCK', 'NORMAL')
+    );
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 'OUT_OF_STOCK';
+END;
+/
+
+-- ROWNUM을 사용한 TOP N 조회 함수
+CREATE OR REPLACE FUNCTION GET_TOP_PRODUCTS(
+    p_limit IN NUMBER
+) RETURN SYS_REFCURSOR AS
+    v_cursor SYS_REFCURSOR;
+BEGIN
+    OPEN v_cursor FOR
+        SELECT * FROM (
+            SELECT PRODUCT_ID, PRODUCT_CODE, PRODUCT_NAME, UNIT_PRICE
+            FROM PRODUCT
+            ORDER BY UNIT_PRICE DESC
+        ) WHERE ROWNUM <= p_limit;
+    
+    RETURN v_cursor;
+END;
+/
+
+-- MERGE 문을 사용한 재고 업데이트 프로시저
+CREATE OR REPLACE PROCEDURE MERGE_INVENTORY(
+    p_product_id IN NUMBER,
+    p_quantity IN NUMBER
+) AS
+BEGIN
+    MERGE INTO INVENTORY i
+    USING (SELECT p_product_id AS product_id, p_quantity AS quantity FROM DUAL) src
+    ON (i.PRODUCT_ID = src.product_id)
+    WHEN MATCHED THEN
+        UPDATE SET 
+            i.QUANTITY = i.QUANTITY + src.quantity,
+            i.LAST_UPDATED = SYSTIMESTAMP,
+            i.VERSION = i.VERSION + 1
+    WHEN NOT MATCHED THEN
+        INSERT (INVENTORY_ID, PRODUCT_ID, QUANTITY, LAST_UPDATED, VERSION)
+        VALUES (INVENTORY_SEQ.NEXTVAL, src.product_id, src.quantity, SYSTIMESTAMP, 0);
+    
+    COMMIT;
 END;
 /
 
