@@ -173,10 +173,15 @@ server:
 - **BFILE**: 외부 파일 참조 (EXTERNAL_FILE)
 - **XMLType**: XML 문서 (SPEC_XML)
 - **CONNECT BY**: 계층 쿼리 (PRODUCTION_HISTORY)
-- **Stored Procedure**: CALCULATE_ORDER_TOTAL
-- **Stored Function**: CHECK_PRODUCT_AVAILABLE
+- **Stored Procedure**: CALCULATE_ORDER_TOTAL, MERGE_INVENTORY
+- **Stored Function**: CHECK_PRODUCT_AVAILABLE, GET_PRODUCT_STATUS, GET_TOP_PRODUCTS
 - **Materialized View**: DAILY_SUMMARY (REFRESH ON DEMAND)
 - **Partition Table**: QUALITY_INSPECTION (Range + List Composite Partition)
+- **NVL**: NULL 값 처리 (프로시저/함수 내)
+- **DECODE**: 조건부 값 반환 (GET_PRODUCT_STATUS)
+- **ROWNUM**: 페이징 처리 (Hibernate 자동 사용)
+- **MERGE**: UPSERT 작업 (MERGE_INVENTORY)
+- **DUAL**: 함수 호출용 더미 테이블
 
 ### Oracle 특화 기능 UI (http://localhost:8080/oracle-features)
 
@@ -184,7 +189,7 @@ server:
 |------|----------|------|
 | QueryDSL 동적 검색 | 📦 제품 검색 | 제품명, 가격 범위로 동적 검색 |
 | Stored Function | 📊 재고 가용성 확인 | 제품별 재고 충분 여부 체크 |
-| Stored Procedure | 💰 주문 금액 계산 | 주문 상세 기반 총액 자동 계산 |
+| Stored Procedure | 💰 주문 금액 계산 | 주문 상세 기반 총액 자동 계산 (NVL 사용) |
 | CONNECT BY | 🔗 생산 이력 조회 | 계층 구조 이력 표시 |
 | CLOB | 📄 문서 관리 | 대용량 텍스트, 문서 유형별 템플릿 제공 |
 | XMLType | 📋 제품 사양 | XML 검증, 제품별 사양 템플릿 |
@@ -195,7 +200,7 @@ server:
 개발자용 직접 API 호출 (Postman, curl 등):
 
 ```bash
-# 1. Stored Procedure - 주문 금액 계산
+# 1. Stored Procedure - 주문 금액 계산 (NVL 사용)
 curl -X POST http://localhost:8080/api/test/oracle/procedure/calculate-total/1
 
 # 2. Stored Function - 재고 가용성 체크
@@ -227,11 +232,181 @@ curl http://localhost:8080/api/test/oracle/partition/FAIL
 
 # 11. Partition Table - 파티션별 조회 (PENDING)
 curl http://localhost:8080/api/test/oracle/partition/PENDING
+
+# 12. DECODE 함수 - 제품 상태 확인
+curl http://localhost:8080/api/test/oracle/decode/product-status/1
+
+# 13. MERGE 문 - 재고 업데이트 (UPSERT)
+curl -X POST "http://localhost:8080/api/test/oracle/merge/inventory?productId=1&quantity=50"
 ```
 
 **권장 사용 방법:**
 - **일반 사용자**: `http://localhost:8080/oracle-features` 화면 사용
 - **개발자/테스트**: 위 API 직접 호출
+
+---
+
+## PostgreSQL 마이그레이션 시 예상 문제점
+
+### 1. Oracle 전용 함수
+
+| Oracle | PostgreSQL | 변경 필요도 |
+|--------|-----------|-----------|
+| `NVL(col, 0)` | `COALESCE(col, 0)` | 🔴 높음 |
+| `DECODE(col, val1, res1, val2, res2)` | `CASE WHEN col = val1 THEN res1 WHEN col = val2 THEN res2 END` | 🔴 높음 |
+| `SYSDATE` | `CURRENT_TIMESTAMP` | 🟡 중간 |
+| `TO_DATE(str, fmt)` | `TO_TIMESTAMP(str, fmt)` | 🟡 중간 |
+| `ROWNUM` | `ROW_NUMBER() OVER()` 또는 `LIMIT/OFFSET` | 🔴 높음 |
+
+### 2. 데이터 타입
+
+| Oracle | PostgreSQL | 변경 필요도 |
+|--------|-----------|-----------|
+| `NUMBER(19)` | `BIGINT` 또는 `NUMERIC(19)` | 🟡 중간 |
+| `VARCHAR2(n)` | `VARCHAR(n)` | 🟢 낮음 |
+| `CLOB` | `TEXT` | 🟡 중간 |
+| `BLOB` | `BYTEA` | 🟡 중간 |
+| `DATE` (시간 포함) | `TIMESTAMP` | 🟡 중간 |
+| `XMLType` | `XML` | 🟢 낮음 |
+
+### 3. Sequence 문법
+
+**Oracle:**
+```sql
+SELECT PRODUCT_SEQ.NEXTVAL FROM DUAL;
+```
+
+**PostgreSQL:**
+```sql
+SELECT NEXTVAL('product_seq');
+-- 또는
+SELECT NEXTVAL('product_seq'::regclass);
+```
+
+### 4. MERGE 문
+
+**Oracle:**
+```sql
+MERGE INTO inventory i
+USING (SELECT 1 AS product_id, 100 AS quantity FROM DUAL) src
+ON (i.product_id = src.product_id)
+WHEN MATCHED THEN UPDATE SET i.quantity = src.quantity
+WHEN NOT MATCHED THEN INSERT VALUES (src.product_id, src.quantity);
+```
+
+**PostgreSQL:**
+```sql
+INSERT INTO inventory (product_id, quantity)
+VALUES (1, 100)
+ON CONFLICT (product_id)
+DO UPDATE SET quantity = EXCLUDED.quantity;
+```
+
+### 5. 계층 쿼리 (CONNECT BY)
+
+**Oracle:**
+```sql
+SELECT * FROM production_history
+START WITH parent_id IS NULL
+CONNECT BY PRIOR history_id = parent_id;
+```
+
+**PostgreSQL:**
+```sql
+WITH RECURSIVE hierarchy AS (
+    SELECT * FROM production_history WHERE parent_id IS NULL
+    UNION ALL
+    SELECT ph.* FROM production_history ph
+    INNER JOIN hierarchy h ON ph.parent_id = h.history_id
+)
+SELECT * FROM hierarchy;
+```
+
+### 6. DUAL 테이블
+
+**Oracle:**
+```sql
+SELECT GET_PRODUCT_STATUS(1) FROM DUAL;
+```
+
+**PostgreSQL:**
+```sql
+SELECT GET_PRODUCT_STATUS(1);  -- FROM 절 불필요
+```
+
+### 7. Materialized View
+
+**Oracle:**
+```sql
+CREATE MATERIALIZED VIEW daily_summary
+BUILD IMMEDIATE
+REFRESH COMPLETE ON DEMAND
+AS SELECT ...;
+
+-- Refresh
+EXEC DBMS_MVIEW.REFRESH('DAILY_SUMMARY', 'C');
+```
+
+**PostgreSQL:**
+```sql
+CREATE MATERIALIZED VIEW daily_summary
+AS SELECT ...;
+
+-- Refresh
+REFRESH MATERIALIZED VIEW daily_summary;
+```
+
+### 8. Partition Table
+
+**Oracle:**
+```sql
+PARTITION BY RANGE (inspection_date)
+SUBPARTITION BY LIST (result)
+```
+
+**PostgreSQL:**
+```sql
+PARTITION BY RANGE (inspection_date);
+-- Subpartition은 별도 테이블로 구현 필요
+```
+
+### 9. Stored Procedure/Function
+
+**Oracle:**
+```sql
+CREATE OR REPLACE PROCEDURE proc_name(p_in IN NUMBER, p_out OUT NUMBER) AS
+BEGIN
+    ...
+END;
+/
+```
+
+**PostgreSQL:**
+```sql
+CREATE OR REPLACE FUNCTION proc_name(p_in INTEGER, OUT p_out INTEGER)
+RETURNS INTEGER AS $$
+BEGIN
+    ...
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### 10. 마이그레이션 난이도 요약
+
+| 기능 | 난이도 | 비고 |
+|------|--------|------|
+| Sequence | 🟢 낮음 | 문법만 변경 |
+| CLOB/BLOB | 🟡 중간 | TEXT/BYTEA로 변경 |
+| Stored Procedure/Function | 🔴 높음 | 문법 및 로직 재작성 |
+| Trigger | 🟡 중간 | 문법 변경 |
+| CONNECT BY | 🔴 높음 | WITH RECURSIVE로 재작성 |
+| Materialized View | 🟢 낮음 | 문법 약간 변경 |
+| Partition Table | 🟡 중간 | Subpartition 재설계 필요 |
+| NVL/DECODE | 🔴 높음 | 모든 쿼리 수정 필요 |
+| ROWNUM | 🔴 높음 | 페이징 로직 재작성 |
+| MERGE | 🟡 중간 | ON CONFLICT로 변경 |
+
+---
 
 ## API 엔드포인트
 
@@ -256,13 +431,13 @@ curl http://localhost:8080/api/test/oracle/partition/PENDING
 ## Oracle 특화 기능 테스트 API별 사용 테이블 정리
 
 ### 1. POST /api/test/oracle/procedure/calculate-total/{orderId}
-   - **Stored Procedure 테스트**
+   - **Stored Procedure 테스트 (NVL 사용)**
    - 사용 테이블:
      - PRODUCTION_ORDER (주문 정보)
      - ORDER_DETAIL (주문 상세)
 
 ### 2. GET /api/test/oracle/function/check-available
-   - **Stored Function 테스트**
+   - **Stored Function 테스트 (NVL 사용)**
    - 사용 테이블:
      - INVENTORY (재고 정보)
      - PRODUCT (제품 정보)
@@ -297,12 +472,24 @@ curl http://localhost:8080/api/test/oracle/partition/PENDING
    - 사용 테이블:
      - QUALITY_INSPECTION (품질 검사 이력 - Range + List Composite Partition)
 
+### 9. GET /api/test/oracle/decode/product-status/{productId}
+   - **DECODE 함수 테스트**
+   - 사용 테이블:
+     - INVENTORY (재고 정보)
+   - 기능: 재고 수량에 따라 상태 반환 (HIGH_STOCK, NORMAL, LOW_STOCK, OUT_OF_STOCK)
+
+### 10. POST /api/test/oracle/merge/inventory
+   - **MERGE 문 테스트 (UPSERT)**
+   - 사용 테이블:
+     - INVENTORY (재고 정보)
+   - 기능: 재고가 있으면 UPDATE, 없으면 INSERT
+
 ---
 
 ## 구현 완료 현황
 
 ### ✅ 전체 기능 구현 완료
-총 9개 테이블, 8개 Oracle 특화 기능 모두 구현 및 테스트 완료
+총 9개 테이블, 15개 Oracle 특화 기능 모두 구현 및 테스트 완료
 
 ### 테이블 목록
 1. ✅ PRODUCT - Sequence, QueryDSL, JPA
@@ -318,13 +505,18 @@ curl http://localhost:8080/api/test/oracle/partition/PENDING
 ### Oracle 특화 기능
 1. ✅ Sequence - 자동 증가 PK
 2. ✅ QueryDSL - 동적 검색 쿼리
-3. ✅ Stored Procedure - CALCULATE_ORDER_TOTAL
-4. ✅ Stored Function - CHECK_PRODUCT_AVAILABLE
+3. ✅ Stored Procedure - CALCULATE_ORDER_TOTAL, MERGE_INVENTORY
+4. ✅ Stored Function - CHECK_PRODUCT_AVAILABLE, GET_PRODUCT_STATUS, GET_TOP_PRODUCTS
 5. ✅ Trigger - 주문 생성 시 이력 자동 기록
 6. ✅ CONNECT BY - 계층 구조 쿼리
 7. ✅ CLOB - 4GB 대용량 텍스트
 8. ✅ XMLType - XML 데이터 저장 및 검증
 9. ✅ Materialized View - REFRESH ON DEMAND
 10. ✅ Partition Table - Range + List Composite Partition
+11. ✅ NVL - NULL 값 처리 (CALCULATE_ORDER_TOTAL, CHECK_PRODUCT_AVAILABLE)
+12. ✅ DECODE - 조건부 값 반환 (GET_PRODUCT_STATUS)
+13. ✅ ROWNUM - 페이징 처리 (Hibernate 자동 사용)
+14. ✅ MERGE - UPSERT 작업 (MERGE_INVENTORY)
+15. ✅ DUAL - 함수 호출용 더미 테이블
 
 
