@@ -49,7 +49,7 @@ public class OracleFeatureTestController {
             @RequestParam Long productId,
             @RequestParam Integer requiredQty) {
         Integer available = orderMapper.checkProductAvailable(productId, requiredQty);
-        return Map.of("available", available == 1);
+        return Map.of("available", available != null && available == 1);
     }
     
     // 3. CONNECT BY 계층 쿼리 테스트

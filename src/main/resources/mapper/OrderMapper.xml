@@ -11,11 +11,8 @@
     </select>
 
     <!-- Stored Function: CHECK_PRODUCT_AVAILABLE -->
-    <select id="checkProductAvailable" statementType="CALLABLE" resultType="java.lang.Integer">
-        {#{result, mode=OUT, jdbcType=NUMERIC} = CALL CHECK_PRODUCT_AVAILABLE(
-            #{productId, mode=IN, jdbcType=NUMERIC},
-            #{requiredQty, mode=IN, jdbcType=NUMERIC}
-        )}
+    <select id="checkProductAvailable" resultType="java.lang.Integer">
+        SELECT CHECK_PRODUCT_AVAILABLE(#{productId}, #{requiredQty}) FROM DUAL
     </select>
 
     <!-- Stored Function: GET_PRODUCT_STATUS (DECODE 사용) -->

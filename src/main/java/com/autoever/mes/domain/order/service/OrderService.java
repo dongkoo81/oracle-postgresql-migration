@@ -48,36 +48,38 @@ public class OrderService {
         
         ProductionOrder savedOrder = orderRepository.save(order);
         
-        // 2. 주문 상세 생성
-        for (OrderDetailRequest req : details) {
-            var product = productRepository.findById(req.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-            
-            // 재고 체크 (Stored Function)
-            Integer available = orderMapper.checkProductAvailable(req.getProductId(), req.getQuantity());
-            if (available != 1) {
-                throw new RuntimeException("Insufficient inventory for product: " + product.getProductName());
+        // 2. 주문 상세 생성 (details가 있을 경우에만)
+        if (details != null && !details.isEmpty()) {
+            for (OrderDetailRequest req : details) {
+                var product = productRepository.findById(req.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+                
+                // 재고 체크 (Stored Function)
+                Integer available = orderMapper.checkProductAvailable(req.getProductId(), req.getQuantity());
+                if (available != null && available != 1) {
+                    throw new RuntimeException("Insufficient inventory for product: " + product.getProductName());
+                }
+                
+                OrderDetail detail = new OrderDetail();
+                detail.setOrderId(savedOrder.getOrderId());
+                detail.setProductId(req.getProductId());
+                detail.setQuantity(req.getQuantity());
+                detail.setUnitPrice(product.getUnitPrice());
+                detail.setLineAmount(product.getUnitPrice().multiply(BigDecimal.valueOf(req.getQuantity())));
+                
+                detailRepository.save(detail);
+                
+                // 재고 차감
+                inventoryRepository.findByProductId(req.getProductId()).ifPresent(inv -> {
+                    inv.setQuantity(inv.getQuantity() - req.getQuantity());
+                    inventoryRepository.save(inv);
+                });
             }
             
-            OrderDetail detail = new OrderDetail();
-            detail.setOrderId(savedOrder.getOrderId());
-            detail.setProductId(req.getProductId());
-            detail.setQuantity(req.getQuantity());
-            detail.setUnitPrice(product.getUnitPrice());
-            detail.setLineAmount(product.getUnitPrice().multiply(BigDecimal.valueOf(req.getQuantity())));
-            
-            detailRepository.save(detail);
-            
-            // 재고 차감
-            inventoryRepository.findByProductId(req.getProductId()).ifPresent(inv -> {
-                inv.setQuantity(inv.getQuantity() - req.getQuantity());
-                inventoryRepository.save(inv);
-            });
+            // 3. 총액 계산 (Stored Procedure)
+            Map<String, Object> result = new HashMap<>();
+            orderMapper.calculateOrderTotal(savedOrder.getOrderId(), result);
         }
-        
-        // 3. 총액 계산 (Stored Procedure)
-        Map<String, Object> result = new HashMap<>();
-        orderMapper.calculateOrderTotal(savedOrder.getOrderId(), result);
         
         return savedOrder;
     }
