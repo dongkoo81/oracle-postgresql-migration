@@ -59,18 +59,18 @@ INSERT INTO PRODUCT_DOCUMENT (DOC_ID, PRODUCT_ID, DOC_NAME, DOC_CONTENT, DOC_FIL
 VALUES (PRODUCT_DOCUMENT_SEQ.NEXTVAL, 1, 'Engine Specification', 
 'This is a detailed specification document for Engine Part A. 
 It includes technical specifications, installation guidelines, and maintenance procedures.',
-NULL, SYSDATE);
+UTL_RAW.CAST_TO_RAW('Binary file content for Engine Specification document'), SYSDATE);
 
 INSERT INTO PRODUCT_DOCUMENT (DOC_ID, PRODUCT_ID, DOC_NAME, DOC_CONTENT, DOC_FILE, CREATED_DATE)
 VALUES (PRODUCT_DOCUMENT_SEQ.NEXTVAL, 2, 'Transmission Manual', 
 'Transmission Part B installation and operation manual. 
 Contains step-by-step instructions and troubleshooting guide.',
-NULL, SYSDATE);
+UTL_RAW.CAST_TO_RAW('Binary file content for Transmission Manual document'), SYSDATE);
 
 INSERT INTO PRODUCT_DOCUMENT (DOC_ID, PRODUCT_ID, DOC_NAME, DOC_CONTENT, DOC_FILE, CREATED_DATE)
 VALUES (PRODUCT_DOCUMENT_SEQ.NEXTVAL, 3, 'Brake Pad Safety Guide', 
 'Safety guidelines and replacement procedures for Brake Pad C.',
-NULL, SYSDATE);
+UTL_RAW.CAST_TO_RAW('Binary file content for Brake Pad Safety Guide document'), SYSDATE);
 
 -- Product Spec Data (XML)
 INSERT INTO PRODUCT_SPEC (SPEC_ID, PRODUCT_ID, SPEC_XML, VERSION, CREATED_DATE)
